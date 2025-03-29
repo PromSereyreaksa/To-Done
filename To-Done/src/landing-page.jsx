@@ -22,18 +22,18 @@ const LandingPage = () => {
 
     // Add smooth scroll behavior
     const handleAnchorClick = (e) => {
-      const href = e.target.getAttribute('href')
-      if (href && href.startsWith('#')) {
+      const href = e.target.getAttribute("href")
+      if (href && href.startsWith("#")) {
         e.preventDefault()
         const targetId = href.substring(1)
         const targetElement = document.getElementById(targetId)
-        
+
         if (targetElement) {
           window.scrollTo({
             top: targetElement.offsetTop - 80, // Offset for header
-            behavior: 'smooth'
+            behavior: "smooth",
           })
-          
+
           // Update URL without page jump
           window.history.pushState(null, null, href)
         }
@@ -42,17 +42,17 @@ const LandingPage = () => {
 
     // Add event listeners to all anchor links
     const anchorLinks = document.querySelectorAll('a[href^="#"]')
-    anchorLinks.forEach(anchor => {
-      anchor.addEventListener('click', handleAnchorClick)
+    anchorLinks.forEach((anchor) => {
+      anchor.addEventListener("click", handleAnchorClick)
     })
 
     return () => {
       window.removeEventListener("scroll", handleScroll)
       clearInterval(interval)
-      
+
       // Clean up event listeners
-      anchorLinks.forEach(anchor => {
-        anchor.removeEventListener('click', handleAnchorClick)
+      anchorLinks.forEach((anchor) => {
+        anchor.removeEventListener("click", handleAnchorClick)
       })
     }
   }, [])
@@ -63,7 +63,7 @@ const LandingPage = () => {
     if (targetElement) {
       window.scrollTo({
         top: targetElement.offsetTop - 80,
-        behavior: 'smooth'
+        behavior: "smooth",
       })
     }
   }
@@ -81,42 +81,42 @@ const LandingPage = () => {
           </div>
 
           <nav className="hidden md:flex space-x-8">
-            <a 
-              href="#features" 
+            <a
+              href="#features"
               className="hover:text-[#A7E8D2] transition-colors"
               onClick={(e) => {
                 e.preventDefault()
-                scrollToSection('features')
+                scrollToSection("features")
               }}
             >
               Features
             </a>
-            <a 
-              href="#pricing" 
+            <a
+              href="#pricing"
               className="hover:text-[#A7E8D2] transition-colors"
               onClick={(e) => {
                 e.preventDefault()
-                scrollToSection('pricing')
+                scrollToSection("pricing")
               }}
             >
               Pricing
             </a>
-            <a 
-              href="#testimonials" 
+            <a
+              href="#testimonials"
               className="hover:text-[#A7E8D2] transition-colors"
               onClick={(e) => {
                 e.preventDefault()
-                scrollToSection('testimonials')
+                scrollToSection("testimonials")
               }}
             >
               Testimonials
             </a>
-            <a 
-              href="#faq" 
+            <a
+              href="#faq"
               className="hover:text-[#A7E8D2] transition-colors"
               onClick={(e) => {
                 e.preventDefault()
-                scrollToSection('faq')
+                scrollToSection("faq")
               }}
             >
               FAQ
@@ -160,7 +160,7 @@ const LandingPage = () => {
                   className="border border-[#A7E8D2] text-[#A7E8D2] px-6 py-3 rounded-md font-medium text-center hover:bg-[#A7E8D2]/10 transition-colors"
                   onClick={(e) => {
                     e.preventDefault()
-                    scrollToSection('features')
+                    scrollToSection("features")
                   }}
                 >
                   Learn More
@@ -199,7 +199,7 @@ const LandingPage = () => {
                   </div>
                 </div>
               </div>
-              <div className="absolute -bottom-10 -right-10 bg-[#A7E8D2] text-[#020F2B] p-4 rounded-lg shadow-lg transform -rotate-6 hover:rotate-0 transition-transform duration-500">
+              <div className="absolute -bottom-10 -right-0 bg-[#A7E8D2] text-[#020F2B] p-4 rounded-lg shadow-lg transform -rotate-6 hover:rotate-0 transition-transform duration-500">
                 <p className="font-bold">Productivity up 37% this week! 🚀</p>
               </div>
             </div>
@@ -310,7 +310,7 @@ const LandingPage = () => {
                 </div>
               </div>
 
-              <div className="absolute -top-6 -right-6 bg-[#A7E8D2] text-[#020F2B] p-3 rounded-lg shadow-lg transform rotate-12 hover:rotate-0 transition-transform duration-500">
+              <div className="absolute -top-6 -right-0 bg-[#A7E8D2] text-[#020F2B] p-3 rounded-lg shadow-lg transform rotate-12 hover:rotate-0 transition-transform duration-500">
                 <p className="font-bold text-sm">New feature available!</p>
               </div>
             </div>
@@ -656,3 +656,4 @@ const LandingPage = () => {
 }
 
 export default LandingPage
+
