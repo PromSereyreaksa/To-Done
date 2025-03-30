@@ -1,0 +1,10 @@
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[build]
+  command = "CI= npm run build"
+
+[build.environment]
+  GO_VERSION = "1.19"
