@@ -7,11 +7,27 @@ import { Button } from "./components/ui/button"
 import { Input } from "./components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "./components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "./components/ui/tabs"
-import { CheckCircle, Circle, Trash2, Folder, ChevronDown, ChevronRight, Edit, X, BarChart2, Plus } from "lucide-react"
+import {
+  CheckCircle,
+  Circle,
+  Trash2,
+  Folder,
+  ChevronDown,
+  ChevronRight,
+  Edit,
+  X,
+  BarChart2,
+  Plus,
+  Clock,
+  Flag,
+  MessageSquare,
+} from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./components/ui/dropdown-menu"
 import { Label } from "./components/ui/label"
 import { AppHeader } from "./components/app-header"
-import AddTaskButton from "./components/add-task-button.jsx" // Changed to .jsx extension
+import AddTaskButton from "./components/add-task-button.jsx"
+import TaskEditModal from "./components/task-edit-modal"
+import { useNotifications } from "./components/notification-system"
 
 // Custom theme
 const customTheme = {
@@ -35,6 +51,7 @@ const STORAGE_KEYS = {
 export default function TodoApp() {
   const navigate = useNavigate()
   const auth = useAuth()
+  const { addNotification } = useNotifications()
   const [user, setUser] = useState(null)
 
   // Theme state
@@ -60,7 +77,8 @@ export default function TodoApp() {
       priority: "high",
       createdAt: new Date().toISOString(),
       completedAt: null,
-      dueDate: null,
+      dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+      comments: [],
     },
     {
       id: 2,
@@ -70,7 +88,8 @@ export default function TodoApp() {
       priority: "medium",
       createdAt: new Date().toISOString(),
       completedAt: new Date().toISOString(),
-      dueDate: null,
+      dueDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+      comments: [],
     },
     {
       id: 3,
@@ -80,7 +99,8 @@ export default function TodoApp() {
       priority: "low",
       createdAt: new Date().toISOString(),
       completedAt: null,
-      dueDate: null,
+      dueDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(),
+      comments: [],
     },
   ]
 
@@ -103,6 +123,7 @@ export default function TodoApp() {
   const [showCompletedTasks, setShowCompletedTasks] = useState(true)
   const [compactMode, setCompactMode] = useState(false)
   const [showAddFolderModal, setShowAddFolderModal] = useState(false)
+  const [editingTask, setEditingTask] = useState(null)
 
   // Save to localStorage
   useEffect(() => {
@@ -144,31 +165,99 @@ export default function TodoApp() {
   // Handlers
   const handleAddTask = (newTaskObj) => {
     console.log("Adding new task:", newTaskObj)
-    setTasks((prevTasks) => [...prevTasks, newTaskObj])
+
+    // Ensure the task has a comments array
+    if (!newTaskObj.comments) {
+      newTaskObj.comments = []
+    }
+
+    // Set due date to today if not specified
+    if (!newTaskObj.dueDate) {
+      const today = new Date()
+      today.setHours(23, 59, 59, 999) // End of today
+      newTaskObj.dueDate = today.toISOString()
+    }
+
+    const updatedTasks = [...tasks, newTaskObj]
+    setTasks(updatedTasks)
+
+    // Save to localStorage immediately
+    localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(updatedTasks))
+
+    // Show notification
+    addNotification({
+      title: "Task Added",
+      message: `"${newTaskObj.text}" has been added`,
+      type: "success",
+      showToast: true,
+    })
   }
 
   const toggleTaskCompletion = (id) => {
     console.log("Toggling task completion for ID:", id)
-    setTasks((prevTasks) =>
-      prevTasks.map((task) =>
-        task.id === id
-          ? { ...task, completed: !task.completed, completedAt: !task.completed ? new Date().toISOString() : null }
-          : task,
-      ),
+    const updatedTasks = tasks.map((task) =>
+      task.id === id
+        ? { ...task, completed: !task.completed, completedAt: !task.completed ? new Date().toISOString() : null }
+        : task,
     )
+    setTasks(updatedTasks)
+
+    // Save to localStorage immediately
+    localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(updatedTasks))
+
+    // Show notification
+    const task = tasks.find((t) => t.id === id)
+    if (task) {
+      addNotification({
+        title: task.completed ? "Task Uncompleted" : "Task Completed",
+        message: `"${task.text}" has been ${task.completed ? "marked as incomplete" : "completed"}`,
+        type: task.completed ? "info" : "success",
+        showToast: true,
+      })
+    }
   }
 
   const deleteTask = (id) => {
-    setTasks((prevTasks) => prevTasks.filter((task) => task.id !== id))
+    const taskToDelete = tasks.find((t) => t.id === id)
+    const updatedTasks = tasks.filter((task) => task.id !== id)
+    setTasks(updatedTasks)
+
+    // Save to localStorage immediately
+    localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(updatedTasks))
+
+    // Show notification
+    if (taskToDelete) {
+      addNotification({
+        title: "Task Deleted",
+        message: `"${taskToDelete.text}" has been deleted`,
+        type: "info",
+        showToast: true,
+      })
+    }
   }
 
   const clearCompleted = () => {
     const completedTasks = tasks.filter((task) => task.completed)
     const activeTasks = tasks.filter((task) => !task.completed)
     const existingCompleted = JSON.parse(localStorage.getItem(STORAGE_KEYS.COMPLETED_TASKS) || "[]")
+
+    // Save completed tasks to archive
     localStorage.setItem(STORAGE_KEYS.COMPLETED_TASKS, JSON.stringify([...existingCompleted, ...completedTasks]))
     console.log("Cleared completed tasks:", completedTasks)
+
+    // Update active tasks
     setTasks(activeTasks)
+
+    // Save to localStorage immediately
+    localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(activeTasks))
+
+    // Show notification
+    addNotification({
+      title: "Completed Tasks Cleared",
+      message: `${completedTasks.length} completed tasks have been archived`,
+      type: "info",
+      showToast: true,
+    })
   }
 
   const goToSummary = () => {
@@ -179,40 +268,87 @@ export default function TodoApp() {
   const addFolder = () => {
     if (newFolderName.trim() === "") return
     const newFolder = { id: Date.now(), name: newFolderName, icon: newFolderIcon, expanded: true }
-    setFolders((prevFolders) => [...prevFolders, newFolder])
+    const updatedFolders = [...folders, newFolder]
+    setFolders(updatedFolders)
+
+    // Save to localStorage immediately
+    localStorage.setItem(STORAGE_KEYS.FOLDERS, JSON.stringify(updatedFolders))
+
     setNewFolderName("")
     setNewFolderIcon("📁")
     setShowAddFolderModal(false)
+
+    // Show notification
+    addNotification({
+      title: "Folder Added",
+      message: `"${newFolderName}" folder has been created`,
+      type: "success",
+      showToast: true,
+    })
   }
 
   const updateFolder = () => {
     if (!editingFolder || newFolderName.trim() === "") return
-    setFolders((prevFolders) =>
-      prevFolders.map((folder) =>
-        folder.id === editingFolder.id ? { ...folder, name: newFolderName, icon: newFolderIcon } : folder,
-      ),
+    const updatedFolders = folders.map((folder) =>
+      folder.id === editingFolder.id ? { ...folder, name: newFolderName, icon: newFolderIcon } : folder,
     )
+    setFolders(updatedFolders)
+
+    // Save to localStorage immediately
+    localStorage.setItem(STORAGE_KEYS.FOLDERS, JSON.stringify(updatedFolders))
+
     setEditingFolder(null)
     setNewFolderName("")
     setNewFolderIcon("📁")
     setShowAddFolderModal(false)
+
+    // Show notification
+    addNotification({
+      title: "Folder Updated",
+      message: `"${newFolderName}" folder has been updated`,
+      type: "success",
+      showToast: true,
+    })
   }
 
   const deleteFolder = (id) => {
+    const folderToDelete = folders.find((f) => f.id === id)
     const defaultFolderId = folders[0].id !== id ? folders[0].id : folders[1] ? folders[1].id : null
     if (defaultFolderId) {
-      setTasks((prevTasks) =>
-        prevTasks.map((task) => (task.folderId === id ? { ...task, folderId: defaultFolderId } : task)),
-      )
+      const updatedTasks = tasks.map((task) => (task.folderId === id ? { ...task, folderId: defaultFolderId } : task))
+      setTasks(updatedTasks)
+
+      // Save to localStorage immediately
+      localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(updatedTasks))
     }
-    setFolders((prevFolders) => prevFolders.filter((folder) => folder.id !== id))
+
+    const updatedFolders = folders.filter((folder) => folder.id !== id)
+    setFolders(updatedFolders)
+
+    // Save to localStorage immediately
+    localStorage.setItem(STORAGE_KEYS.FOLDERS, JSON.stringify(updatedFolders))
+
     if (activeFolder === id.toString()) setActiveFolder("all")
+
+    // Show notification
+    if (folderToDelete) {
+      addNotification({
+        title: "Folder Deleted",
+        message: `"${folderToDelete.name}" folder has been deleted`,
+        type: "info",
+        showToast: true,
+      })
+    }
   }
 
   const toggleFolderExpansion = (id) => {
-    setFolders((prevFolders) =>
-      prevFolders.map((folder) => (folder.id === id ? { ...folder, expanded: !folder.expanded } : folder)),
+    const updatedFolders = folders.map((folder) =>
+      folder.id === id ? { ...folder, expanded: !folder.expanded } : folder,
     )
+    setFolders(updatedFolders)
+
+    // Save to localStorage immediately
+    localStorage.setItem(STORAGE_KEYS.FOLDERS, JSON.stringify(updatedFolders))
   }
 
   const startEditFolder = (folder) => {
@@ -220,6 +356,40 @@ export default function TodoApp() {
     setNewFolderName(folder.name)
     setNewFolderIcon(folder.icon)
     setShowAddFolderModal(true)
+  }
+
+  const handleEditTask = (task) => {
+    setEditingTask(task)
+  }
+
+  const saveEditedTask = (editedTask) => {
+    const updatedTasks = tasks.map((task) => (task.id === editedTask.id ? editedTask : task))
+    setTasks(updatedTasks)
+
+    // Save to localStorage immediately
+    localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(updatedTasks))
+
+    // Show notification
+    addNotification({
+      title: "Task Updated",
+      message: `"${editedTask.text}" has been updated`,
+      type: "success",
+      showToast: true,
+    })
+  }
+
+  // Get priority color
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case "high":
+        return "text-red-400"
+      case "medium":
+        return "text-yellow-400"
+      case "low":
+        return "text-green-400"
+      default:
+        return "text-gray-400"
+    }
   }
 
   // Filter tasks
@@ -406,16 +576,46 @@ export default function TodoApp() {
                                     <Circle className="h-5 w-5" />
                                   )}
                                 </button>
-                                <span className={`truncate ${task.completed ? "line-through text-gray-400" : ""}`}>
-                                  {task.text}
-                                </span>
+                                <div className="flex-1 min-w-0">
+                                  <div className={`truncate ${task.completed ? "line-through text-gray-400" : ""}`}>
+                                    {task.text}
+                                  </div>
+                                  <div className="flex items-center text-xs text-gray-400 mt-1">
+                                    <Flag className={`h-3 w-3 mr-1 ${getPriorityColor(task.priority)}`} />
+                                    <span className="mr-2">{task.priority}</span>
+
+                                    {task.dueDate && (
+                                      <>
+                                        <Clock className="h-3 w-3 mr-1" />
+                                        <span className="mr-2">Due: {new Date(task.dueDate).toLocaleDateString()}</span>
+                                      </>
+                                    )}
+
+                                    {task.comments && task.comments.length > 0 && (
+                                      <>
+                                        <MessageSquare className="h-3 w-3 mr-1" />
+                                        <span>{task.comments.length}</span>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
-                              <button
-                                onClick={() => deleteTask(task.id)}
-                                className="text-gray-400 hover:text-red-400 ml-2 flex-shrink-0"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
+                              <div className="flex items-center">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleEditTask(task)}
+                                  className="h-10 w-10 p-0 text-gray-400 hover:text-white"
+                                >
+                                  <Edit className="h-5 w-5" />
+                                </Button>
+                                <button
+                                  onClick={() => deleteTask(task.id)}
+                                  className="text-gray-400 hover:text-red-400 ml-2 flex-shrink-0"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -437,16 +637,46 @@ export default function TodoApp() {
                             >
                               {task.completed ? <CheckCircle className="h-5 w-5" /> : <Circle className="h-5 w-5" />}
                             </button>
-                            <span className={`truncate ${task.completed ? "line-through text-gray-400" : ""}`}>
-                              {task.text}
-                            </span>
+                            <div className="flex-1 min-w-0">
+                              <div className={`truncate ${task.completed ? "line-through text-gray-400" : ""}`}>
+                                {task.text}
+                              </div>
+                              <div className="flex items-center text-xs text-gray-400 mt-1">
+                                <Flag className={`h-3 w-3 mr-1 ${getPriorityColor(task.priority)}`} />
+                                <span className="mr-2">{task.priority}</span>
+
+                                {task.dueDate && (
+                                  <>
+                                    <Clock className="h-3 w-3 mr-1" />
+                                    <span className="mr-2">Due: {new Date(task.dueDate).toLocaleDateString()}</span>
+                                  </>
+                                )}
+
+                                {task.comments && task.comments.length > 0 && (
+                                  <>
+                                    <MessageSquare className="h-3 w-3 mr-1" />
+                                    <span>{task.comments.length}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                          <button
-                            onClick={() => deleteTask(task.id)}
-                            className="text-gray-400 hover:text-red-400 ml-2 flex-shrink-0"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                          <div className="flex items-center">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditTask(task)}
+                              className="h-10 w-10 p-0 text-gray-400 hover:text-white"
+                            >
+                              <Edit className="h-5 w-5" />
+                            </Button>
+                            <button
+                              onClick={() => deleteTask(task.id)}
+                              className="text-gray-400 hover:text-red-400 ml-2 flex-shrink-0"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
                         </div>
                       ))
                     ) : (
@@ -513,6 +743,8 @@ export default function TodoApp() {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {/* Add/Edit Folder Modal */}
       {showAddFolderModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[10000]">
           <div className="bg-[#051640] text-white rounded-lg shadow-xl w-full max-w-sm p-4 mx-4">
@@ -571,6 +803,16 @@ export default function TodoApp() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Task Edit Modal */}
+      {editingTask && (
+        <TaskEditModal
+          task={editingTask}
+          onClose={() => setEditingTask(null)}
+          onSave={saveEditedTask}
+          folders={folders}
+        />
       )}
     </div>
   )

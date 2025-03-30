@@ -1,13 +1,17 @@
 "use client"
 import { useNavigate } from "react-router-dom"
-import { BarChart2, Calendar } from "lucide-react"
+import { BarChart2, Calendar, Users, Bell } from "lucide-react"
 import { Button } from "./ui/button"
 import { useAuth } from "../auth-context"
+import { useNotifications } from "./notification-system"
 
 export function AppHeader() {
   const navigate = useNavigate()
   const auth = useAuth()
+  const { notifications, toggleNotifications } = useNotifications()
   const user = auth?.user || {}
+
+  const unreadCount = notifications.filter((n) => !n.read).length
 
   return (
     <header className="bg-[#051640] shadow-md py-4">
@@ -42,10 +46,33 @@ export function AppHeader() {
               <Calendar className="h-4 w-4 mr-2" />
               Schedule
             </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/team")}
+              className="text-white hover:bg-[#051640]/80"
+            >
+              <Users className="h-4 w-4 mr-2" />
+              Team
+            </Button>
           </nav>
         </div>
 
         <div className="flex items-center space-x-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleNotifications}
+            className="relative text-white hover:bg-[#051640]/80 cursor-pointer"
+          >
+            <Bell className="h-4 w-4" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-[10px] flex items-center justify-center">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </Button>
+
           <Button
             variant="ghost"
             size="sm"
